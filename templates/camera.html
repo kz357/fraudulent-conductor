@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Access</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        
+        #video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            background-color: #000;
+            transform: scaleX(-1);
+            z-index: 10;
+        }
+
+        #placeholder {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            background-color: #000;
+            z-index: 15;
+        }
+    </style>
+</head>
+<body>
+    <img id="placeholder" src="{{ url_for('static', filename='hand.png') }}" alt="Hand placeholder">
+    <video id="video" autoplay playsinline></video>
+    <div id="status"></div>
+
+        <script>
+            const video = document.getElementById('video');
+            const status = document.getElementById('status');
+            const placeholder = document.getElementById('placeholder');
+            let stream = null;
+            
+            async function startCamera() {
+            try {
+                status.textContent = 'Requesting camera access...';
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                
+                video.addEventListener('playing', () => {
+                    placeholder.style.display = 'none';
+                }, { once: true });
+                
+                status.textContent = 'Camera active';
+                
+            } catch (err) {
+                console.error('Error accessing webcam:', err);
+                status.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        startCamera();
+        </script>
+</body>
+</html>
