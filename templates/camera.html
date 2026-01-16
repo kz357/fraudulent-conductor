@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <style>
         body {
             margin: 0;
@@ -36,6 +37,18 @@
             z-index: 15;
         }
 
+        #loadStatus {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 20px;
+            z-index: 25;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
         #output {
             position: fixed;
             top: 0;
@@ -52,6 +65,7 @@
     <video id="video" autoplay playsinline></video>
     <canvas id="output" width="1920" height="1080"></canvas>
     <div id="status"></div>
+    <div id="loadStatus"></div>
 
         <script>
             const video = document.getElementById('video');
@@ -103,6 +117,14 @@
 
         hands.onResults(onResults);
 
+        hands.onResults((results) => {
+            onResults(results);
+            if (!window.handLoaded) {
+                document.getElementById('loadStatus').innerHTML += 'Hand loaded<br>';
+                window.handLoaded = true;
+            }
+        });
+
         const face = new FaceDetection({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
         }});
@@ -114,6 +136,14 @@
 
         face.onResults(onFaceResults);
 
+        face.onResults((results) => {
+            onFaceResults(results);
+            if (!window.faceLoaded) {
+                document.getElementById('loadStatus').innerHTML += 'face loaded<br>';
+                window.faceLoaded = true;
+            }
+        });
+
         let handResults = null;
         let faceResults = null;
 
@@ -123,6 +153,9 @@
         }
 
         function onFaceResults(results) {
+            if (results.detections && results.detections.length > 1) {
+                results.detections = [results.detections[0]];
+            }
             faceResults = results;
             drawAll();
         }
@@ -146,6 +179,39 @@
                     drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
                 }
             }
+            
+            // hand line
+            if (handResults.multiHandLandmarks.length === 2) {
+                const hand1 = handResults.multiHandLandmarks[0][9]; // Middle finger base
+                const hand2 = handResults.multiHandLandmarks[1][9];
+                
+                const x1 = hand1.x * canvasElement.width;
+                const y1 = hand1.y * canvasElement.height;
+                const x2 = hand2.x * canvasElement.width;
+                const y2 = hand2.y * canvasElement.height;
+                
+                // dotted line
+                canvasCtx.beginPath();
+                canvasCtx.setLineDash([10, 10]);
+                canvasCtx.strokeStyle = '#00FF00';
+                canvasCtx.lineWidth = 3;
+                canvasCtx.moveTo(x1, y1);
+                canvasCtx.lineTo(x2, y2);
+                canvasCtx.stroke();
+                canvasCtx.setLineDash([]);
+                
+                const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                
+                // display distance
+                // Display distance
+                canvasCtx.save();
+                canvasCtx.scale(-1, 1);
+                canvasCtx.fillStyle = '#FFFF00';
+                canvasCtx.font = '30px Arial';
+                canvasCtx.fillText(`${Math.round(distance)}px`, -((x1 + x2) / 2), (y1 + y2) / 2 - 20);
+                canvasCtx.restore();
+            }
+        
             
             canvasCtx.restore();
         }
