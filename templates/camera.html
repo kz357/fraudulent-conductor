@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
     <style>
         body {
             margin: 0;
@@ -102,12 +103,45 @@
 
         hands.onResults(onResults);
 
+        const face = new FaceDetection({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+        }});
+
+        face.setOptions({
+            model: 'short',
+            minDetectionConfidence: 0.5
+        });
+
+        face.onResults(onFaceResults);
+
+        let handResults = null;
+        let faceResults = null;
+
         function onResults(results) {
+            handResults = results;
+            drawAll();
+        }
+
+        function onFaceResults(results) {
+            faceResults = results;
+            drawAll();
+        }
+
+        function drawAll() {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            //face 
+            // Draw faces first
+            if (faceResults && faceResults.detections) {
+                for (const detection of faceResults.detections) {
+                    drawRectangle(canvasCtx, detection.boundingBox, {color: 'blue', lineWidth: 3, fillColor: 'rgba(0,0,255,0.1)'});
+                }
+            }
             
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
+            // hands
+            if (handResults && handResults.multiHandLandmarks) {
+                for (const landmarks of handResults.multiHandLandmarks) {
                     drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 5});
                     drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
                 }
@@ -119,6 +153,7 @@
         const camera = new Camera(video, {
             onFrame: async () => {
                 await hands.send({image: video});
+                await face.send({image: video});
             },
             width: 1920,
             height: 1080
