@@ -62,7 +62,7 @@
 </head>
 <body>
     <img id="placeholder" src="{{ url_for('static', filename='hand.png') }}" alt="Hand placeholder">
-    <video id="video" autoplay playsinline></video>
+    <video id="video" autoplay playsinline disablePictureInPicture></video>
     <canvas id="output" width="1920" height="1080"></canvas>
     <div id="status"></div>
     <div id="loadStatus"></div>
@@ -75,7 +75,7 @@
             
             async function startCamera() {
             try {
-                status.textContent = 'Requesting camera access...';
+                status.textContent = 'give me camera';
                 
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
