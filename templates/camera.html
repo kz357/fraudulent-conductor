@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraudulent Conductor</title>
+    <title>fraudulent conductor</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
@@ -63,12 +63,14 @@
 <body>
     <img id="placeholder" src="{{ url_for('static', filename='hand.png') }}" alt="Hand placeholder">
     <img id="jksimmons" src="{{ url_for('static', filename='jksimmons.avif') }}" style="display: none;">
-    <audio id="bgMusic" loop>
-    <source src="{{ url_for('static', filename='Mr. Sandman - The Chordettes.mp3') }}" type="audio/mpeg"></audio>
     <video id="video" autoplay playsinline disablePictureInPicture></video>
     <canvas id="output" width="1920" height="1080"></canvas>
     <div id="status"></div>
     <div id="loadStatus"></div>
+    <audio id="mrsandman" loop autoplay>
+        <source src="{{ url_for('static', filename='Mr. Sandman - The Chordettes.mp3') }}" type="audio/mpeg">
+    </audio>
+    <img id="crown" src="{{ url_for('static', filename='crown.jpeg') }}" style="display: none;">
 
         <script>
             const video = document.getElementById('video');
@@ -94,11 +96,11 @@
                     placeholder.style.display = 'none';
                 }, { once: true });
                 
-                status.textContent = 'Camera active';
+                status.textContent = 'camera active';
                 
             } catch (err) {
-                console.error('Error accessing webcam:', err);
-                status.textContent = 'Error: ' + err.message;
+                console.error('error accessing webcam', err);
+                status.textContent = 'error: ' + err.message;
             }
         }
 
@@ -107,8 +109,13 @@
         const canvasElement = document.getElementById('output');
         const canvasCtx = canvasElement.getContext('2d');
 
-        const audio = document.getElementById('bgMusic');
-        audio.play().catch(e => console.log('audio blocked', e));
+        const audio = document.getElementById('mrsandman');
+
+        audio.play().catch(() => {
+            document.body.addEventListener('click', () => {
+                audio.play();
+            }, { once: true });
+        });
 
         const hands = new Hands({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -126,7 +133,7 @@
         hands.onResults((results) => {
             onResults(results);
             if (!window.handLoaded) {
-                document.getElementById('loadStatus').innerHTML += 'Hand loaded<br>';
+                document.getElementById('loadStatus').innerHTML += 'click to start music<br>';
                 window.handLoaded = true;
             }
         });
@@ -145,7 +152,7 @@
         face.onResults((results) => {
             onFaceResults(results);
             if (!window.faceLoaded) {
-                document.getElementById('loadStatus').innerHTML += 'face loaded<br>';
+                document.getElementById('loadStatus').innerHTML += 'move hands for fun times<br>';
                 window.faceLoaded = true;
             }
         });
@@ -173,8 +180,41 @@
             //face 
             // Draw faces first
             if (faceResults && faceResults.detections) {
+
+                
+                console.log('face detections:', faceResults.detections.length);
+
+                const crown = document.getElementById('crown');
+                console.log('Crown:', crown);
+                
                 for (const detection of faceResults.detections) {
-                    drawRectangle(canvasCtx, detection.boundingBox, {color: 'blue', lineWidth: 3, fillColor: 'rgba(0,0,255,0.1)'});
+                    console.log('full detection object:', detection);
+                    console.log('bounding box:', detection.boundingBox);
+                    const box = detection.boundingBox;
+                    const width = box.width * canvasElement.width;
+                    const height = box.height * canvasElement.height;
+                    const x = (box.xCenter * canvasElement.width) - (width / 2);
+                    const y = (box.yCenter * canvasElement.height) - (height / 2);
+                    
+                    console.log('Face box coords:', x, y, width, height);
+                    
+                    // Draw blue box
+                    canvasCtx.strokeStyle = '#0000FF';
+                    canvasCtx.lineWidth = 3;
+                    canvasCtx.strokeRect(x, y, width, height);
+
+                    canvasCtx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                    canvasCtx.fillRect(x, y, width, height);
+                    
+                    // Draw crown above the face box
+                    const crownWidth = width * 1.2;
+                    const crownHeight = height * 0.6;
+                    const crownX = x - (crownWidth - width) / 2;
+                    const crownY = y - crownHeight;
+                    
+                    if (crown && crown.complete) {
+                        canvasCtx.drawImage(crown, crownX, crownY, crownWidth, crownHeight);
+                    }
                 }
             }
             
@@ -207,6 +247,9 @@
                 canvasCtx.setLineDash([]);
                 
                 const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                const speed = 600 / distance;
+                audio.playbackRate = speed;
                 
                 // display distance
                 // Display distance
